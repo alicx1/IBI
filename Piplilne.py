@@ -22,6 +22,6 @@ read_tsv = csv.reader(tsv_file, delimiter="\t")
 
 for row in read_tsv:
   print(row)
-  print('\n Téléchargement du fichier \n')
+  print('\n Téléchargement du fichier zip\n')
   if row[2]:
       if ';' in row[3]:
