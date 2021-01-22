@@ -5,7 +5,7 @@ import os
 def download_sample(url, md5, name):
     print("Téléchargement du fichier\n", name)
     filename = wget.download(url)
-    #md5 à check
+    #md5 à check plus tard
 
 '''
 lien = input("Tapez le lien du projet: \n")
@@ -15,6 +15,7 @@ print('Début du téléchargement du fichier TSV') #On télécharge le fichier T
 url = 'https://www.ebi.ac.uk/ena/portal/api/filereport?accession='+ project +'&result=read_run&fields=fastq_md5,fastq_ftp,sample_title&format=tsv&download=true'
 wget.download(url, './fichier.tsv')
 print("\n")
+
 
 '''
 tsv_file = open("./fichier.tsv")
