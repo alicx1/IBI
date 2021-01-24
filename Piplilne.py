@@ -29,7 +29,7 @@ print(project)
 print('Début du téléchargement du fichier TSV') #On télécharge le fichier TSV en se basant sur le code du projet
 url = 'https://www.ebi.ac.uk/ena/portal/api/filereport?accession='+ project +'&result=read_run&fields=fastq_md5,fastq_ftp,sample_title&format=tsv&download=true'
 nameTsv = "FILE_"+project+".tsv"
-#sp.call(['wget', '-O', nameTsv, url])
+sp.call(['wget', '-O', nameTsv, url])
 print("\n TSV file downloaded\n")
 
 
