@@ -16,6 +16,7 @@ def download_sample(url, md5, dirName):
         currentPath = path + "/" + fastqName
         os.replace(currentPath, pathFastQ)
     
+    
     #Checking md5
     if (os.path.isfile(pathFastQ)): 
         currentMd5 = hashlib.md5(open(pathFastQ,'rb').read()).hexdigest()
