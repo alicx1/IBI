@@ -12,14 +12,17 @@ def download_sample(url, md5, dirName):
 
     #Downloading file then moving it
     if (not os.path.isfile(pathFastQ)): 
-        sp.call(['wget', '-O', fastqName, url])
+        sp.call(['wget', '-O', fastqName, url]) 
         currentPath = path + "/" + fastqName
         os.replace(currentPath, pathFastQ)
     
     #Checking md5
-    currentMd5 = hashlib.md5(open(pathFastQ,'rb').read()).hexdigest()
-    if currentMd5 == md5: print("md5 correct for " + fastqName + "\n")
-    else: print("md5 incorrect for " + fastqName + "\n")
+    if (os.path.isfile(pathFastQ)): 
+        currentMd5 = hashlib.md5(open(pathFastQ,'rb').read()).hexdigest()
+        if currentMd5 == md5: print("md5 correct for " + fastqName + "\n")
+        else: print("md5 incorrect for " + fastqName + "\n")
+
+    else: print("The file " + fastqName + " does not exist\n")
         
 
 
