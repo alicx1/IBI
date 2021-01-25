@@ -31,7 +31,7 @@ lien = input("Tapez le lien du projet: \n")
 project = lien.rsplit('/', 1)[-1] #On recup la derniere partie de l'url càd le code du projet
 print(project)
 print('Début du téléchargement du fichier TSV') #On télécharge le fichier TSV en se basant sur le code du projet
-url = 'https://www.ebi.ac.uk/ena/portal/api/filereport?accession='+ project +'&result=read_run&fields=fastq_md5,fastq_ftp,sample_title&format=tsv&download=true'
+url = 'https://www.ebi.ac.uk/ena/portal/api/filereport?accession='+ project +'&result=read_run&fields=fastq_md5,fastq_ftp,sample_alias&format=tsv&download=true'
 nameTsv = "FILE_"+project+".tsv"
 sp.call(['wget', '-O', nameTsv, url])
 print("\n TSV file downloaded\n")
