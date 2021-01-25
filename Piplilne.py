@@ -18,8 +18,8 @@ def download_sample(url, md5, dirName):
     
     #Checking md5
     currentMd5 = hashlib.md5(open(pathFastQ,'rb').read()).hexdigest()
-    if currentMd5 == md5: print("md5 correct \n")
-    else: print("md5 incorrect \n")
+    if currentMd5 == md5: print("md5 correct for " + fastqName + "\n")
+    else: print("md5 incorrect for " + fastqName + "\n")
         
 
 
@@ -36,26 +36,17 @@ print("\n TSV file downloaded\n")
 #Open the TSV fil using csv
 tsv_file = open("./" + nameTsv)
 read_tsv = csv.reader(tsv_file, delimiter="\t")
+next(read_tsv)  # skip the headers
 
 
 if not os.path.isdir('files'): os.mkdir('files')
 for row in read_tsv:
-  #print(row)
-  pathFile = path + "/files/" + row[4]
-  if not os.path.isdir(pathFile): os.mkdir(pathFile)
-  if row[2]:
-      if ';' in row[3]:
-          tmpFastQ = row[3].split(';')
-          tmpHash= row[2].split(';')
-          download_sample(tmpFastQ[0], tmpHash[0], "files/"+row[4])
-
-
-
-'''
-try:
-    os.mkdir(path2)
-except OSError:
-    print ("Creation of the directory %s failed" % path2)
-else:
-    print ("Successfully created the directory %s " % path2)
-    '''
+  if row[2]: #if the file is not empty
+    pathFile = path + "/files/" + row[4]
+    if not os.path.isdir(pathFile): os.mkdir(pathFile)
+    if ';' in row[3]:
+        tmpFastQ = row[3].split(';')
+        tmpHash= row[2].split(';')
+        download_sample(tmpFastQ[0], tmpHash[0], "files/"+row[4])
+        download_sample(tmpFastQ[1], tmpHash[1], "files/"+row[4])
+    else: download_sample(row[3], row[2], "files/"+row[4])
