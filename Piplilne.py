@@ -4,7 +4,7 @@ import os
 import hashlib
 import subprocess as sp
 path = os.getcwd()
-
+'''
 def download_sample(url, md5, dirName):
     print("Téléchargement du fichier", dirName)
     fastqName = url.rsplit('/', 1)[-1]
@@ -54,3 +54,15 @@ for row in read_tsv:
         download_sample(tmpFastQ[0], tmpHash[0], "files/"+row[4])
         download_sample(tmpFastQ[1], tmpHash[1], "files/"+row[4])
     else: download_sample(row[3], row[2], "files/"+row[4])
+    '''
+#bwa mem ref.fa read1.fq read2.fq > aln-pe.sam
+#bwa index S288C_reference_sequence_R64-2-1_20150113.fsa 
+refGen = "S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fsa"
+file1 = "files/UFMG-CM-Y215/ERR2299966_1.fastq.gz"
+file2 = "files/UFMG-CM-Y215/ERR2299966_2.fastq.gz"
+#sp.call(['bwa', 'index', refGen])
+#sp.call(['bwa', 'index', file1])
+#sp.call(['bwa', 'index', file2])
+sp.call(['bwa', 'mem', refGen, file1, file2, '>', 'out.sam'])
+
+#bwa mem S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fsa files/UFMG-CM-Y215/ERR2299966_1.fastq.gz files/UFMG-CM-Y215/ERR2299966_2.fastq.gz > res.sam
