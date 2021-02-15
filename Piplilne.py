@@ -63,6 +63,27 @@ file2 = "files/UFMG-CM-Y215/ERR2299966_2.fastq.gz"
 #sp.call(['bwa', 'index', refGen])
 #sp.call(['bwa', 'index', file1])
 #sp.call(['bwa', 'index', file2])
-sp.call(['bwa', 'mem', refGen, file1, file2, '>', 'out.sam'])
 
-#bwa mem S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fsa files/UFMG-CM-Y215/ERR2299966_1.fastq.gz files/UFMG-CM-Y215/ERR2299966_2.fastq.gz > res.sam
+echantillon = "UFMG-CM-Y215"
+SAMheader = '@RG\\tID:'+ echantillon +'\\tPL:ILLUMINA\\tPI:0\\tSM:'+ echantillon
+#print (heaader)
+#os.system("bwa mem -R '@RG\\tID:"+echantillon+"' "+refGen+" "+file1+" "+file2+ "> out.sam") 
+#os.system("samtools view out.sam -o out.bam")
+#os.system("samtools sort out.bam -o outSorted.bam")
+#os.system("samtools flagstat outSorted.bam")
+os.system("gatk MarkDuplicatesSpark -I outSorted.bam -O outMarked.bam")
+# a execeuter: export PATH="/mnt/c/Users/PC/Documents/L3/IBI/gatk-4.1.9.0:$PATH"
+
+#bwa mem -R '@RG\tID:echantillon\tPL:ILLUMINA' S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fsa files/UFMG-CM-Y215/ERR2299966_1.fastq.gz files/UFMG-CM-Y215/ERR2299966_2.fastq.gz > res.sam
+
+
+
+
+
+
+
+
+
+
+
+
