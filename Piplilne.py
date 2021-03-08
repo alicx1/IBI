@@ -4,6 +4,7 @@ import os
 import hashlib
 import subprocess as sp
 path = os.getcwd()
+
 '''
 def download_sample(url, md5, dirName):
     print("Téléchargement du fichier", dirName)
@@ -57,6 +58,7 @@ for row in read_tsv:
     '''
 #bwa mem ref.fa read1.fq read2.fq > aln-pe.sam
 #bwa index S288C_reference_sequence_R64-2-1_20150113.fsa 
+#bwa mem -R '@RG\tID:echantillon\tPL:ILLUMINA' S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fsa files/UFMG-CM-Y215/ERR2299966_1.fastq.gz files/UFMG-CM-Y215/ERR2299966_2.fastq.gz > res.sam
 refGen = "S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fsa"
 file1 = "files/UFMG-CM-Y215/ERR2299966_1.fastq.gz"
 file2 = "files/UFMG-CM-Y215/ERR2299966_2.fastq.gz"
@@ -65,25 +67,22 @@ file2 = "files/UFMG-CM-Y215/ERR2299966_2.fastq.gz"
 #sp.call(['bwa', 'index', file2])
 
 echantillon = "UFMG-CM-Y215"
-SAMheader = '@RG\\tID:'+ echantillon +'\\tPL:ILLUMINA\\tPI:0\\tSM:'+ echantillon
+#SAMheader = '@RG\\tID:'+ echantillon +'\\tPL:ILLUMINA\\tPI:0\\tSM:'+ echantillon
 #print (heaader)
-#os.system("bwa mem -R '@RG\\tID:"+echantillon+"' "+refGen+" "+file1+" "+file2+ "> out.sam") 
-#os.system("samtools view out.sam -o out.bam")
-#os.system("samtools sort out.bam -o outSorted.bam")
-#os.system("samtools flagstat outSorted.bam")
+#os.system("bwa mem -R '@RG\\tID:"+echantillon+"\\tSM:"+echantillon+"_sample' "+refGen+" "+file1+" "+file2+ "> out.sam") 
+os.system("samtools view out.sam -o out.bam")
+os.system("samtools sort out.bam -o outSorted.bam")
+os.system("samtools flagstat outSorted.bam")
 os.system("gatk MarkDuplicatesSpark -I outSorted.bam -O outMarked.bam")
-# a execeuter: export PATH="/mnt/c/Users/PC/Documents/L3/IBI/gatk-4.1.9.0:$PATH"
-
-#bwa mem -R '@RG\tID:echantillon\tPL:ILLUMINA' S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fsa files/UFMG-CM-Y215/ERR2299966_1.fastq.gz files/UFMG-CM-Y215/ERR2299966_2.fastq.gz > res.sam
-
-
-
-
-
-
-
-
-
-
-
-
+#os.system("samtools faidx "+ refGen)
+#os.system("gatk CreateSequenceDictionary -R " + refGen)
+#copier le fsa et le renomer en fasta
+refGenFasta = "S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fasta"
+#os.system("samtools faidx "+ refGenFasta)
+#os.system("gatk CreateSequenceDictionary -R " + refGenFasta)
+os.system("gatk --java-options '-Xmx4g' HaplotypeCaller \
+   -R "+ refGenFasta +" \
+   -I outMarked.bam \
+   -O output.g.vcf.gz \
+   -ERC GVCF "
+   )
