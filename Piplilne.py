@@ -58,7 +58,7 @@ for row in read_tsv:
         #Téléchargement du fastq
         #download_sample(tmpFastQ[0], tmpHash[0], "files/"+row[4])
         #download_sample(tmpFastQ[1], tmpHash[1], "files/"+row[4])
-        '''
+        
 
         #Fichiers fastq
         echantillon = row[4]
@@ -66,7 +66,7 @@ for row in read_tsv:
         fastqName2 = tmpFastQ[1].rsplit('/', 1)[-1]
         file1= "files/"+echantillon+"/"+fastqName1
         file2= "files/"+echantillon+"/"+fastqName2
-
+        '''
         print(file1 + " \n" + file2)
 
         #BWA mem
@@ -82,17 +82,18 @@ for row in read_tsv:
         
         os.system("samtools flagstat "+ bamFileSorted)
 
-        bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
+        #bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
         os.system("gatk MarkDuplicatesSpark -I " + bamFileSorted + " -O " + bamFileMarked)
-
-        outGVCF = "files/"+ echantillon + "/output.g.vcf.gz"
+        '''
+        bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
+        outGVCF = "files/GVCF/"+ echantillon + ".g.vcf.gz"
         os.system("gatk --java-options '-Xmx4g' HaplotypeCaller \
         -R "+ refGenFasta +" \
         -I "+ bamFileMarked +" \
         -O "+ outGVCF +" \
         -ERC GVCF "
         )
-
+        '''
         #clean
         os.system("rm "+ samFile)
         os.system("rm "+ bamFile)
@@ -106,7 +107,7 @@ for row in read_tsv:
         file = "files/"+echantillon+"/"+fastqName
 
         print(file + " \n")
-
+        '''
         #BWA mem
         samFile = "files/"+ echantillon + "/out.sam"
         os.system("bwa mem -R '@RG\\tID:"+echantillon+"\\tSM:"+echantillon+"_sample' "+refGen+" "+file+ "> "+samFile)
@@ -123,20 +124,21 @@ for row in read_tsv:
 
         bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
         os.system("gatk MarkDuplicatesSpark -I " + bamFileSorted + " -O " + bamFileMarked)
-
-        outGVCF = "files/"+ echantillon + "/output.g.vcf.gz"
+        '''
+        bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
+        outGVCF = "files/GVCF/"+ echantillon + ".g.vcf.gz"
         os.system("gatk --java-options '-Xmx4g' HaplotypeCaller \
         -R "+ refGenFasta +" \
         -I "+ bamFileMarked +" \
         -O "+ outGVCF +" \
         -ERC GVCF "
         )
-
+        '''
         #clean
         os.system("rm "+ samFile)
         os.system("rm "+ bamFile)
         os.system("rm "+ bamFileMarked)
-        
+        '''
 
 '''
 
