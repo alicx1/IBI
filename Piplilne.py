@@ -5,7 +5,7 @@ import hashlib
 import subprocess as sp
 path = os.getcwd()
 
-
+'''
 def download_sample(url, md5, dirName):
     print("Téléchargement du fichier", dirName)
     fastqName = url.rsplit('/', 1)[-1]
@@ -66,7 +66,7 @@ for row in read_tsv:
         fastqName2 = tmpFastQ[1].rsplit('/', 1)[-1]
         file1= "files/"+echantillon+"/"+fastqName1
         file2= "files/"+echantillon+"/"+fastqName2
-        '''
+        
         print(file1 + " \n" + file2)
 
         #BWA mem
@@ -82,9 +82,9 @@ for row in read_tsv:
         
         os.system("samtools flagstat "+ bamFileSorted)
 
-        #bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
+        bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
         os.system("gatk MarkDuplicatesSpark -I " + bamFileSorted + " -O " + bamFileMarked)
-        '''
+        
         bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
         outGVCF = "files/GVCF/"+ echantillon + ".g.vcf.gz"
         os.system("gatk --java-options '-Xmx4g' HaplotypeCaller \
@@ -93,12 +93,12 @@ for row in read_tsv:
         -O "+ outGVCF +" \
         -ERC GVCF "
         )
-        '''
+        
         #clean
-        os.system("rm "+ samFile)
-        os.system("rm "+ bamFile)
-        os.system("rm "+ bamFileMarked)
-        '''
+        #os.system("rm "+ samFile)
+        #os.system("rm "+ bamFile)
+        #os.system("rm "+ bamFileMarked)
+        
     else: #download_sample(row[3], row[2], "files/"+row[4])
 
         #Fichiers fastq
@@ -107,7 +107,7 @@ for row in read_tsv:
         file = "files/"+echantillon+"/"+fastqName
 
         print(file + " \n")
-        '''
+        
         #BWA mem
         samFile = "files/"+ echantillon + "/out.sam"
         os.system("bwa mem -R '@RG\\tID:"+echantillon+"\\tSM:"+echantillon+"_sample' "+refGen+" "+file+ "> "+samFile)
@@ -124,7 +124,7 @@ for row in read_tsv:
 
         bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
         os.system("gatk MarkDuplicatesSpark -I " + bamFileSorted + " -O " + bamFileMarked)
-        '''
+        
         bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
         outGVCF = "files/GVCF/"+ echantillon + ".g.vcf.gz"
         os.system("gatk --java-options '-Xmx4g' HaplotypeCaller \
@@ -133,15 +133,15 @@ for row in read_tsv:
         -O "+ outGVCF +" \
         -ERC GVCF "
         )
-        '''
+        
         #clean
-        os.system("rm "+ samFile)
-        os.system("rm "+ bamFile)
-        os.system("rm "+ bamFileMarked)
-        '''
+        #os.system("rm "+ samFile)
+        #os.system("rm "+ bamFile)
+        #os.system("rm "+ bamFileMarked)
+        
 
 '''
-
+'''
 ###https://www.ebi.ac.uk/ena/browser/view/PRJEB24932
 #bwa mem ref.fa read1.fq read2.fq > aln-pe.sam
 #bwa index S288C_reference_sequence_R64-2-1_20150113.fsa 
@@ -168,10 +168,71 @@ os.system("gatk CreateSequenceDictionary -R " + refGen)
 refGenFasta = "S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fasta"
 #os.system("samtools faidx "+ refGenFasta)
 #os.system("gatk CreateSequenceDictionary -R " + refGenFasta)
+
 os.system("gatk --java-options '-Xmx4g' HaplotypeCaller \
    -R "+ refGenFasta +" \
    -I outMarked2.bam \
    -O output2.g.vcf.gz \
    -ERC GVCF "
    )
-   '''
+
+#Création de la liste de gvcf pour l'utiliser avec genomicsDBImport
+commandeV = ''
+listFiles = os.listdir('files/GVCF')
+for x in listFiles:
+    if not(".tbi" in x):
+        commandeV += '-V files/GVCF/' + x + ' \\\n'
+
+#print(commandeV)
+
+
+os.system("gatk --java-options \"-Xmx4g -Xms4g -DGATK_STACKTRACE_ON_USER_EXCEPTION=true\" GenomicsDBImport \
+      " + commandeV + 
+      "--genomicsdb-workspace-path my_database2 \
+      -L files/intervals.list"
+)
+
+
+refGenFasta = "S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fasta"
+
+os.system("gatk --java-options '-Xmx4g' GenotypeGVCFs \
+   -R "+ refGenFasta +" \
+   -V gendb://my_database2 \
+   -O table.vcf.gz"
+)
+
+os.system("gatk SelectVariants \
+   -R "+ refGenFasta +" \
+   -V table.vcf.gz \
+   --select-type-to-include SNP \
+   -O table_raw.vcf.gz "
+   )
+'''
+os.system("bcftools query -f '%CHROM\t%POS\t%QD\t%FS\t%MQ\t%MQRankSum\t%ReadPosRankSum\t%SOR\n' table_raw.vcf.gz >> table_raw_annotations")#CM3 cours6
+'''
+#scriptR 
+
+gatk VariantFiltration \
+
+   -R $reference.fasta \
+
+   -V ${file}_raw.vcf.gz \
+
+   -filter "QD<" --filter-name "QD" \
+
+   -filter "SOR<" --filter-name "SOR" \
+
+   -filter "FS> " --filter-name "FS" \
+
+   -filter "MQ <" --filter-name "MQ" \
+
+   -filter "MQRankSum < " --filter-name "MQRankSum" \
+
+   -filter "ReadPosRankSum < " --filter-name "ReadPosRankSum" \
+
+   -O ${file}_filtered.vcf.gz
+
+
+vcftools --gzvcf ${file}_filtered.vcf.gz --remove-filtered-all --recode --stdout | gzip -c > ${file}_PASS.vcf.gz
+
+bcftools query'''
