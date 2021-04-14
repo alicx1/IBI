@@ -28,6 +28,13 @@ refGen = "S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2
 refGenFasta = "S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fasta"
 ####
 # Placer le fichier intervals.list dans files/intervals.list
+# Installer certains logiciels:
+# Installer BioConda avec:   curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+#                            sh Miniconda3-latest-Linux-x86_64.sh
+# Installer vcfTools avec: sudo apt install vcftools
+# Installer java8 avec: sudo apt install openjdk-8-jdk
+# Installer gatk avec: conda install -c bioconda gatk4
+# Install the other missing like this
 ##############################################
 
 def download_sample(url, md5, dirName):
@@ -212,21 +219,20 @@ if (CHECK_SNP_ANNOTATION == 1):
 
 # On utilise le scriptR afin de créer des courbes et avoir la valeur des filtres qu'on rentrea dans la fonction ci dessous
 
-if (CHECK_AFTER_SCRIPTR = 1):
-    #Ne marche pas pour des raisons qu'on ignore
-    os.system("gatk VariantFiltration \
-    -R "+ refGenFasta +" \
-    -V table_raw.vcf.gz \
-    -filter "QD < 0" --filter-name "QD" \
-    -filter "SOR < 0" --filter-name "SOR" \
-    -filter "FS > 0" --filter-name "FS" \
-    -filter "MQ < 0" --filter-name "MQ" \
-    -filter "MQRankSum < 0" --filter-name "MQRankSum" \
-    -filter "ReadPosRankSum < 0" --filter-name "ReadPosRankSum" \
-    -O table_filtered.vcf.gz"
-    )
+if (CHECK_AFTER_SCRIPTR == 1):
+    #On filtre en utilisant des valeurs
+    os.system('gatk VariantFiltration \
+   -R '+ refGenFasta +' \
+   -V table_raw.vcf.gz \
+   -filter "QD < 8" --filter-name "QD8" \
+   -filter "SOR < 3" --filter-name "SOR3" \
+   -filter "MQ < 55" --filter-name "MQ55" \
+   -filter "MQRankSum < -4" --filter-name "MQRankSum4" \
+   -filter "ReadPosRankSum < -3" --filter-name "ReadPosRankSum3" \
+   -O table_filtered.vcf.gz ')
 
-    #Marche
+    #On utilise vcftools
     os.system("vcftools --gzvcf table_filtered.vcf.gz --remove-filtered-all --recode --stdout | gzip -c > table_PASS.vcf.gz")
 
-    #bcftools query à faire
+    #bcftools query
+    os.system("bcftools query -f '%CHROM\t%POS\t%QD\t%MQ\t%MQRankSum\t%ReadPosRankSum\t%SOR\n' table_PASS.vcf.gz >> table_PASS_annotations")
