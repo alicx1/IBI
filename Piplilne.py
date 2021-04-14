@@ -1,3 +1,9 @@
+#Réalisé dans le cadre d'un projet d'étude à l'Université de Paris-Saclay
+#UE: IBI
+#Réalisé par: KAMOUN Alicx, KOMARA Mohamed Ba et LAKHEL Amine
+#Sous la supervision de Mme. POUYET Fanny
+#2020-2021
+
 import wget
 import csv
 import os
@@ -5,7 +11,25 @@ import hashlib
 import subprocess as sp
 path = os.getcwd()
 
-'''
+CHECK_DL =  1 #Télécharger les fichiers fastQ et check md5
+CHECK_CREATEGVCF = 1 #Créer le .sam .bam .bamSorted et .bamMarked puis créer le GVCF
+CHECK_CLEAN = 1 #Supprime le fichier .sam, .bam et .bamSorted
+CHECK_GENOMEREF = 1 #Indexation du génome de refèrence
+CHECK_CREATEVCF = 1 #Créer la base de donnée et la table des VCF
+CHECK_SNP_ANNOTATION = 1 #Filtrer les SNP puis créer le fichier annotation
+CHECK_AFTER_SCRIPTR = 0 #Faire la suite des commandes après avoir utilisé le scriptR
+
+###### A FAIRE Avant de lancer le script:#################################
+##Lien du projet qu'on a utilisé: https://www.ebi.ac.uk/ena/browser/view/PRJEB24932
+#Quelques traitements pour le fichier de génome de référence
+# Mettre le genome de reference ici
+refGen = "S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fsa"
+#copier le fichier .fsa et le renommer en .fasta
+refGenFasta = "S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fasta"
+####
+# Placer le fichier intervals.list dans files/intervals.list
+##############################################
+
 def download_sample(url, md5, dirName):
     print("Téléchargement du fichier", dirName)
     fastqName = url.rsplit('/', 1)[-1]
@@ -34,7 +58,7 @@ print(project)
 print('Début du téléchargement du fichier TSV') #On télécharge le fichier TSV en se basant sur le code du projet
 url = 'https://www.ebi.ac.uk/ena/portal/api/filereport?accession='+ project +'&result=read_run&fields=fastq_md5,fastq_ftp,sample_alias&format=tsv&download=true'
 nameTsv = "FILE_"+project+".tsv"
-#sp.call(['wget', '-O', nameTsv, url])
+sp.call(['wget', '-O', nameTsv, url])
 print("\n TSV file downloaded\n")
 
 
@@ -42,9 +66,7 @@ print("\n TSV file downloaded\n")
 tsv_file = open("./" + nameTsv)
 read_tsv = csv.reader(tsv_file, delimiter="\t")
 next(read_tsv)  # skip the headers
-refGen = "S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fsa"
-#copier le fsa et le renomer en fasta
-refGenFasta = "S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fasta"
+
 
 
 if not os.path.isdir('files'): os.mkdir('files')
@@ -56,10 +78,10 @@ for row in read_tsv:
         tmpFastQ = row[3].split(';')
         tmpHash= row[2].split(';')
         #Téléchargement du fastq
-        #download_sample(tmpFastQ[0], tmpHash[0], "files/"+row[4])
-        #download_sample(tmpFastQ[1], tmpHash[1], "files/"+row[4])
+        if (CHECK_DL == 1):
+            download_sample(tmpFastQ[0], tmpHash[0], "files/"+row[4])
+            download_sample(tmpFastQ[1], tmpHash[1], "files/"+row[4])
         
-
         #Fichiers fastq
         echantillon = row[4]
         fastqName1 = tmpFastQ[0].rsplit('/', 1)[-1]
@@ -67,172 +89,144 @@ for row in read_tsv:
         file1= "files/"+echantillon+"/"+fastqName1
         file2= "files/"+echantillon+"/"+fastqName2
         
-        print(file1 + " \n" + file2)
+        #Etapes de création du GVCF
+        if (CHECK_CREATEGVCF == 1):
 
-        #BWA mem
-        samFile = "files/"+ echantillon + "/out.sam"
-        os.system("bwa mem -R '@RG\\tID:"+echantillon+"\\tSM:"+echantillon+"_sample' "+refGen+" "+file1+" "+file2+ "> "+samFile)
+            #BWA mem
+            samFile = "files/"+ echantillon + "/out.sam"
+            os.system("bwa mem -R '@RG\\tID:"+echantillon+"\\tSM:"+echantillon+"_sample' "+refGen+" "+file1+" "+file2+ "> "+samFile)
 
-        #Samtools
-        bamFile = "files/"+ echantillon + "/out.bam"
-        os.system("samtools view "+ samFile +" -o " + bamFile)
+            #Samtools
+            bamFile = "files/"+ echantillon + "/out.bam"
+            os.system("samtools view "+ samFile +" -o " + bamFile)
 
-        bamFileSorted = "files/"+ echantillon + "/outSorted.bam"
-        os.system("samtools sort " + bamFile+ " -o " + bamFileSorted)
-        
-        os.system("samtools flagstat "+ bamFileSorted)
+            bamFileSorted = "files/"+ echantillon + "/outSorted.bam"
+            os.system("samtools sort " + bamFile+ " -o " + bamFileSorted)
+            
+            os.system("samtools flagstat "+ bamFileSorted)
 
-        bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
-        os.system("gatk MarkDuplicatesSpark -I " + bamFileSorted + " -O " + bamFileMarked)
-        
-        bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
-        outGVCF = "files/GVCF/"+ echantillon + ".g.vcf.gz"
-        os.system("gatk --java-options '-Xmx4g' HaplotypeCaller \
-        -R "+ refGenFasta +" \
-        -I "+ bamFileMarked +" \
-        -O "+ outGVCF +" \
-        -ERC GVCF "
-        )
+            bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
+            os.system("gatk MarkDuplicatesSpark -I " + bamFileSorted + " -O " + bamFileMarked)
+            
+            bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
+            outGVCF = "files/GVCF/"+ echantillon + ".g.vcf.gz"
+            os.system("gatk --java-options '-Xmx4g' HaplotypeCaller \
+            -R "+ refGenFasta +" \
+            -I "+ bamFileMarked +" \
+            -O "+ outGVCF +" \
+            -ERC GVCF "
+            )
         
         #clean
-        #os.system("rm "+ samFile)
-        #os.system("rm "+ bamFile)
-        #os.system("rm "+ bamFileMarked)
+        if(CHECK_CLEAN == 1):
+            os.system("rm "+ samFile)
+            os.system("rm "+ bamFile)
+            os.system("rm "+ bamFileSorted)
         
-    else: #download_sample(row[3], row[2], "files/"+row[4])
+    else:
+        #Téléchargement du fichier fastq
+        if (CHECK_DL == 1):
+            download_sample(row[3], row[2], "files/"+row[4])
 
         #Fichiers fastq
         echantillon = row[4]
         fastqName = row[3].rsplit('/', 1)[-1]
         file = "files/"+echantillon+"/"+fastqName
-
-        print(file + " \n")
         
-        #BWA mem
-        samFile = "files/"+ echantillon + "/out.sam"
-        os.system("bwa mem -R '@RG\\tID:"+echantillon+"\\tSM:"+echantillon+"_sample' "+refGen+" "+file+ "> "+samFile)
+        #Etapes de création du GVCF
+        if (CHECK_CREATEGVCF == 1):
+            #BWA mem
+            samFile = "files/"+ echantillon + "/out.sam"
+            os.system("bwa mem -R '@RG\\tID:"+echantillon+"\\tSM:"+echantillon+"_sample' "+refGen+" "+file+ "> "+samFile)
 
-        
-        #Samtools
-        bamFile = "files/"+ echantillon + "/out.bam"
-        os.system("samtools view "+ samFile +" -o " + bamFile)
+            
+            #Samtools
+            bamFile = "files/"+ echantillon + "/out.bam"
+            os.system("samtools view "+ samFile +" -o " + bamFile)
 
-        bamFileSorted = "files/"+ echantillon + "/outSorted.bam"
-        os.system("samtools sort " + bamFile+ " -o " + bamFileSorted)
-        
-        os.system("samtools flagstat "+ bamFileSorted)
+            bamFileSorted = "files/"+ echantillon + "/outSorted.bam"
+            os.system("samtools sort " + bamFile+ " -o " + bamFileSorted)
+            
+            os.system("samtools flagstat "+ bamFileSorted)
 
-        bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
-        os.system("gatk MarkDuplicatesSpark -I " + bamFileSorted + " -O " + bamFileMarked)
-        
-        bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
-        outGVCF = "files/GVCF/"+ echantillon + ".g.vcf.gz"
-        os.system("gatk --java-options '-Xmx4g' HaplotypeCaller \
-        -R "+ refGenFasta +" \
-        -I "+ bamFileMarked +" \
-        -O "+ outGVCF +" \
-        -ERC GVCF "
-        )
+            bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
+            os.system("gatk MarkDuplicatesSpark -I " + bamFileSorted + " -O " + bamFileMarked)
+            
+            bamFileMarked = "files/"+ echantillon + "/outMarked.bam"
+            outGVCF = "files/GVCF/"+ echantillon + ".g.vcf.gz"
+            os.system("gatk --java-options '-Xmx4g' HaplotypeCaller \
+            -R "+ refGenFasta +" \
+            -I "+ bamFileSorted +" \
+            -O "+ outGVCF +" \
+            -ERC GVCF "
+            )
         
         #clean
-        #os.system("rm "+ samFile)
-        #os.system("rm "+ bamFile)
-        #os.system("rm "+ bamFileMarked)
-        
+        if(CHECK_CLEAN == 1):
+            os.system("rm "+ samFile)
+            os.system("rm "+ bamFile)
+            os.system("rm "+ bamFileMarked)
 
-'''
-'''
-###https://www.ebi.ac.uk/ena/browser/view/PRJEB24932
-#bwa mem ref.fa read1.fq read2.fq > aln-pe.sam
-#bwa index S288C_reference_sequence_R64-2-1_20150113.fsa 
-#bwa mem -R '@RG\tID:echantillon\tPL:ILLUMINA' S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fsa files/UFMG-CM-Y215/ERR2299966_1.fastq.gz files/UFMG-CM-Y215/ERR2299966_2.fastq.gz > res.sam
-#refGen = "S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fsa"
-file1 = "files/UFMG-CM-Y223/ERR2299967_1.fastq.gz"
-file2 = "files/UFMG-CM-Y223/ERR2299967_2.fastq.gz"
-#sp.call(['bwa', 'index', refGen])
-#sp.call(['bwa', 'index', file1])
-#sp.call(['bwa', 'index', file2])
-
-echantillon = "UFMG-CM-Y223"
-#SAMheader = '@RG\\tID:'+ echantillon +'\\tPL:ILLUMINA\\tPI:0\\tSM:'+ echantillon
-#print (heaader)
-os.system("bwa mem -R '@RG\\tID:"+echantillon+"\\tSM:"+echantillon+"_sample' "+refGen+" "+file1+" "+file2+ "> out2.sam")
-#laisser le bam sorted pour plus tard
-os.system("samtools view out2.sam -o out2.bam")
-os.system("samtools sort out2.bam -o outSorted2.bam")
-os.system("samtools flagstat outSorted2.bam")
-os.system("gatk MarkDuplicatesSpark -I outSorted2.bam -O outMarked2.bam")
-os.system("samtools faidx "+ refGen)
-os.system("gatk CreateSequenceDictionary -R " + refGen)
-#copier le fsa et le renomer en fasta
-refGenFasta = "S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fasta"
-#os.system("samtools faidx "+ refGenFasta)
-#os.system("gatk CreateSequenceDictionary -R " + refGenFasta)
-
-os.system("gatk --java-options '-Xmx4g' HaplotypeCaller \
-   -R "+ refGenFasta +" \
-   -I outMarked2.bam \
-   -O output2.g.vcf.gz \
-   -ERC GVCF "
-   )
-
-#Création de la liste de gvcf pour l'utiliser avec genomicsDBImport
-commandeV = ''
-listFiles = os.listdir('files/GVCF')
-for x in listFiles:
-    if not(".tbi" in x):
-        commandeV += '-V files/GVCF/' + x + ' \\\n'
-
-#print(commandeV)
+#Indexation du genome de référence
+if (CHECK_GENOMEREF == 1):
+    sp.call(['bwa', 'index', refGen])
+    os.system("samtools faidx "+ refGen)
+    os.system("gatk CreateSequenceDictionary -R " + refGen)
+    #copier le fsa et le renomer en fasta
+    os.system("samtools faidx "+ refGenFasta)
+    os.system("gatk CreateSequenceDictionary -R " + refGenFasta)
 
 
-os.system("gatk --java-options \"-Xmx4g -Xms4g -DGATK_STACKTRACE_ON_USER_EXCEPTION=true\" GenomicsDBImport \
-      " + commandeV + 
-      "--genomicsdb-workspace-path my_database2 \
-      -L files/intervals.list"
-)
+#Création de la database et de la table des VCF
+if (CHECK_CREATEVCF == 1):
+    #Création de la liste de gvcf pour l'utiliser avec genomicsDBImport
+    commandeV = ''
+    listFiles = os.listdir('files/GVCF')
+    for x in listFiles:
+        if not(".tbi" in x):
+            commandeV += '-V files/GVCF/' + x + ' \\\n'
 
+    os.system("gatk --java-options \"-Xmx4g -Xms4g -DGATK_STACKTRACE_ON_USER_EXCEPTION=true\" GenomicsDBImport \
+        " + commandeV + 
+        "--genomicsdb-workspace-path my_database2 \
+        -L files/intervals.list"
+    )
 
-refGenFasta = "S288C_reference_genome_R64-2-1_20150113/S288C_reference_sequence_R64-2-1_20150113.fasta"
+    os.system("gatk --java-options '-Xmx4g' GenotypeGVCFs \
+    -R "+ refGenFasta +" \
+    -V gendb://my_database2 \
+    -O table.vcf.gz"
+    )
 
-os.system("gatk --java-options '-Xmx4g' GenotypeGVCFs \
-   -R "+ refGenFasta +" \
-   -V gendb://my_database2 \
-   -O table.vcf.gz"
-)
+if (CHECK_SNP_ANNOTATION == 1):
+    #Création de la table des SNP
+    os.system("gatk SelectVariants \
+    -R "+ refGenFasta +" \
+    -V table.vcf.gz \
+    --select-type-to-include SNP \
+    -O table_raw.vcf.gz "
+    )
 
-os.system("gatk SelectVariants \
-   -R "+ refGenFasta +" \
-   -V table.vcf.gz \
-   --select-type-to-include SNP \
-   -O table_raw.vcf.gz "
-   )
-'''
-os.system("bcftools query -f '%CHROM\t%POS\t%QD\t%FS\t%MQ\t%MQRankSum\t%ReadPosRankSum\t%SOR\n' table_raw.vcf.gz >> table_raw_annotations")#CM3 cours6
-'''
-#scriptR 
+    #Création des annotations
+    os.system("bcftools query -f '%CHROM\t%POS\t%QD\t%FS\t%MQ\t%MQRankSum\t%ReadPosRankSum\t%SOR\n' table_raw.vcf.gz >> table_raw_annotations")
 
-gatk VariantFiltration \
+# On utilise le scriptR afin de créer des courbes et avoir la valeur des filtres qu'on rentrea dans la fonction ci dessous
 
-   -R $reference.fasta \
+if (CHECK_AFTER_SCRIPTR = 1):
+    #Ne marche pas pour des raisons qu'on ignore
+    os.system("gatk VariantFiltration \
+    -R "+ refGenFasta +" \
+    -V table_raw.vcf.gz \
+    -filter "QD < 0" --filter-name "QD" \
+    -filter "SOR < 0" --filter-name "SOR" \
+    -filter "FS > 0" --filter-name "FS" \
+    -filter "MQ < 0" --filter-name "MQ" \
+    -filter "MQRankSum < 0" --filter-name "MQRankSum" \
+    -filter "ReadPosRankSum < 0" --filter-name "ReadPosRankSum" \
+    -O table_filtered.vcf.gz"
+    )
 
-   -V ${file}_raw.vcf.gz \
+    #Marche
+    os.system("vcftools --gzvcf table_filtered.vcf.gz --remove-filtered-all --recode --stdout | gzip -c > table_PASS.vcf.gz")
 
-   -filter "QD<" --filter-name "QD" \
-
-   -filter "SOR<" --filter-name "SOR" \
-
-   -filter "FS> " --filter-name "FS" \
-
-   -filter "MQ <" --filter-name "MQ" \
-
-   -filter "MQRankSum < " --filter-name "MQRankSum" \
-
-   -filter "ReadPosRankSum < " --filter-name "ReadPosRankSum" \
-
-   -O ${file}_filtered.vcf.gz
-
-
-vcftools --gzvcf ${file}_filtered.vcf.gz --remove-filtered-all --recode --stdout | gzip -c > ${file}_PASS.vcf.gz
-
-bcftools query'''
+    #bcftools query à faire
